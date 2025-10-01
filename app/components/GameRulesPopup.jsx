@@ -134,7 +134,7 @@ export default function GameRulesPopup({ onClose, totalBet = 0 }) {
                   <div className="sm:col-span-2 md:col-span-3 lg:col-span-4 text-center mt-1">
                     <div className="inline-flex items-center gap-4">
                       <Image
-                        src="/symbols/scatter.png"
+                        src="/symbols/clear_symbols/doghouse.png"
                         alt="Scatter"
                         width={72}
                         height={72}

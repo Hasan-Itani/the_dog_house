@@ -7,11 +7,11 @@ export default function Home() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/bg.jpg')" }}
       />
-      <div className="absolute bottom-0 w-fill z-0">
+      <div className="absolute bottom-10 w-full z-0 flex justify-center">
         <img
           src="/bet_bg.png"
           alt="bet background"
-          className="w-full object-cover"
+          className="w-[90%] object-cover"
         />
       </div>
     </main>

@@ -1,9 +1,11 @@
+// app/page.js
 "use client";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import BetControls from "./components/BetControls";
+import SlotBoard from "./components/SlotBoard";
+
 export default function Home() {
-  const [ready, setReady] = useState(false);
   const slotRef = useRef(null);
 
   const [credit, setCredit] = useState(100000);
@@ -12,35 +14,29 @@ export default function Home() {
   const [roundWin, setRoundWin] = useState(0);
   const [lastWinItems, setLastWinItems] = useState([]);
 
-  const handleSpin = useCallback(
-    (wager, options = {}) => {
-      if (boardState !== "idle") return false;
-      const spinBet = typeof wager === "number" ? wager : totalBet;
-      if (credit < spinBet) return false;
+  const handleSpin = useCallback((wager, options = {}) => {
+    if (boardState !== "idle") return false;
+    const spinBet = typeof wager === "number" ? wager : totalBet;
+    if (credit < spinBet) return false;
 
-      const turboActive = !!options?.turbo;
-      const speedMultiplier = turboActive ? 3 : 1;
-      const started = !!slotRef.current?.tumbleAll?.({ speedMultiplier });
-      if (!started) return false;
+    const started = !!slotRef.current?.tumbleAll?.({
+      speedMultiplier: options?.turbo ? 3 : 1,
+    });
+    if (!started) return false;
 
-      setBoardState("spinning");
-      setRoundWin(0); // reset the round accumulator
-      setLastWinItems([]); // clear last step details
-      setCredit((c) => c - spinBet);
-      return true;
-    },
-    [boardState, credit, totalBet]
-  );
+    setBoardState("spinning");
+    setRoundWin(0);
+    setLastWinItems([]);
+    setCredit((c) => c - spinBet);
+    return true;
+  }, [boardState, credit, totalBet]);
 
-  // receive per-step win (with breakdown)
   const handleWin = useCallback((result) => {
-    const amt =
-      typeof result === "number" ? result : Number(result?.total || 0);
-    const items =
-      typeof result === "object" && result?.items ? result.items : [];
+    const amt = Number(result?.total || 0);
+    const items = result?.items || [];
     setRoundWin((w) => w + amt);
     setCredit((c) => c + amt);
-    if (items?.length) setLastWinItems(items);
+    if (items.length) setLastWinItems(items);
   }, []);
 
   const handleBoardStateChange = useCallback((state) => {
@@ -53,14 +49,24 @@ export default function Home() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/bg.jpg')" }}
       />
-      <div className="absolute bottom-10 w-full z-0 flex justify-center">
-        <img
-          src="/bet_bg.png"
-          alt="bet background"
-          className="w-[90%] object-cover"
+
+      {/* SLOT BOARD (centered) */}
+      <div className="absolute inset-x-0 top-0 bottom-[12vh] z-10 flex items-center justify-center">
+        <SlotBoard
+          ref={slotRef}
+          totalBet={totalBet}
+          onWin={handleWin}
+          onBoardStateChange={handleBoardStateChange}
+          // optional: className="w-[min(92vw,1100px)] aspect-[5/3]"
         />
       </div>
-      {/* Bottom controls ~10vh (allowed to overlap the board) */}
+
+      {/* bet background image (your UI frame) */}
+      <div className="absolute bottom-10 w-full z-0 flex justify-center">
+        <img src="/bet_bg.png" alt="bet background" className="w-[90%] object-cover" />
+      </div>
+
+      {/* controls */}
       <div className="absolute bottom-0 left-0 right-0 z-20 h-[10vh] pointer-events-none">
         <div className="h-full flex items-end justify-center pointer-events-auto">
           <BetControls

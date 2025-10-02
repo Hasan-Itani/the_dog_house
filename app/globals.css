@@ -24,3 +24,45 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+@keyframes reel-spin {
+  0% {
+    transform: translateY(0%);
+  }
+  100% {
+    transform: translateY(-50%);
+  } /* repeated strip, reversed in React for downward motion */
+}
+
+/* --- subtle grid bounce when the reel finishes --- */
+@keyframes reel-stop-bounce {
+  0% {
+    transform: translateY(-6%);
+  }
+  60% {
+    transform: translateY(2%);
+  }
+  100% {
+    transform: translateY(0%);
+  }
+}
+.animate-reel-stop-bounce {
+  animation: reel-stop-bounce 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* --- per-cell drop when new symbol lands --- */
+@keyframes cell-drop-bounce {
+  0% {
+    transform: translateY(-22%) scaleY(0.96);
+  }
+  60% {
+    transform: translateY(8%) scaleY(1.02);
+  }
+  100% {
+    transform: translateY(0%) scaleY(1);
+  }
+}
+.cell-drop {
+  animation: cell-drop-bounce var(--drop-dur, 380ms)
+    cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--drop-delay, 0ms);
+}

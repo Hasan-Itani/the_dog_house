@@ -14,22 +14,25 @@ export default function Home() {
   const [roundWin, setRoundWin] = useState(0);
   const [lastWinItems, setLastWinItems] = useState([]);
 
-  const handleSpin = useCallback((wager, options = {}) => {
-    if (boardState !== "idle") return false;
-    const spinBet = typeof wager === "number" ? wager : totalBet;
-    if (credit < spinBet) return false;
+  const handleSpin = useCallback(
+    (wager, options = {}) => {
+      if (boardState !== "idle") return false;
+      const spinBet = typeof wager === "number" ? wager : totalBet;
+      if (credit < spinBet) return false;
 
-    const started = !!slotRef.current?.tumbleAll?.({
-      speedMultiplier: options?.turbo ? 3 : 1,
-    });
-    if (!started) return false;
+      const started = !!slotRef.current?.tumbleAll?.({
+        speedMultiplier: options?.turbo ? 3 : 1,
+      });
+      if (!started) return false;
 
-    setBoardState("spinning");
-    setRoundWin(0);
-    setLastWinItems([]);
-    setCredit((c) => c - spinBet);
-    return true;
-  }, [boardState, credit, totalBet]);
+      setBoardState("spinning");
+      setRoundWin(0);
+      setLastWinItems([]);
+      setCredit((c) => c - spinBet);
+      return true;
+    },
+    [boardState, credit, totalBet]
+  );
 
   const handleWin = useCallback((result) => {
     const amt = Number(result?.total || 0);
@@ -57,13 +60,8 @@ export default function Home() {
           totalBet={totalBet}
           onWin={handleWin}
           onBoardStateChange={handleBoardStateChange}
-          // optional: className="w-[min(92vw,1100px)] aspect-[5/3]"
+          className="w-[min(96vw,1280px)] aspect-[5/3]" // ← was w-[min(92vw,1100px)]
         />
-      </div>
-
-      {/* bet background image (your UI frame) */}
-      <div className="absolute bottom-10 w-full z-0 flex justify-center">
-        <img src="/bet_bg.png" alt="bet background" className="w-[90%] object-cover" />
       </div>
 
       {/* controls */}

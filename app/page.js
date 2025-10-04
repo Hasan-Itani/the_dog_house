@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
 import BetControls from "./components/BetControls";
 import SlotBoard from "./components/SlotBoard";
+import { Butterfly } from "./components/Butterfly";
 
 export default function Home() {
   const slotRef = useRef(null);
@@ -52,6 +53,20 @@ export default function Home() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/bg.jpg')" }}
       />
+      <div
+        className="
+          pointer-events-none absolute bottom-0 left-0 w-full
+          h-[40vh] sm:h-[45vh] md:h-[30vh]
+          z-[15]
+        "
+        style={{
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 45%, rgba(0,0,0,0) 100%)",
+        }}
+      />
+      <div className="absolute inset-0 overflow-hidden z-[1]">
+        <Butterfly />
+      </div>
 
       {/* SLOT BOARD (centered) */}
       <div className="absolute inset-x-0 top-0 bottom-[12vh] z-10 flex items-center justify-center">

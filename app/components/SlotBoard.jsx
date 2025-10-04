@@ -10,13 +10,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Reel } from "./Reel"; // NEW
+import { Reel } from "./Reel";
 import { payoutTable as RAW_PAYOUTS } from "../hooks/payoutTable";
 
 /** ---------------- constants ---------------- */
 const ROWS = 3;
 const COLS = 5;
-const GAP = 30;
 const WILD_KEY = "doghouse.png";
 
 const SYMBOLS = [
@@ -40,7 +39,7 @@ const DEFAULT_WEIGHTS = {
   "pug.png": 3,
   "taxa.png": 4,
   "collar.png": 6,
-  "doghouse.png": 7, // ← add this
+  "doghouse.png": 7,
   "bone.png": 8,
   "a.png": 10,
   "k.png": 12,
@@ -48,6 +47,8 @@ const DEFAULT_WEIGHTS = {
   "j.png": 16,
   "ten.png": 18,
 };
+
+// 21 стандартная линия Dog House
 const PAYLINES = [
   [0, 0, 0, 0, 0],
   [1, 1, 1, 1, 1],
@@ -76,7 +77,6 @@ const PAYOUTS = { ...RAW_PAYOUTS };
 
 /** ---------------- helpers ---------------- */
 const rngInt = (max) => Math.floor(Math.random() * max);
-const toKey = (name) => name;
 const clearPath = (name) => `/symbols/clear_symbols/${name}`;
 const blurPath = (name) =>
   `/symbols/blur_symbols/${name.replace(/\.png$/i, "_blur.png")}`;
@@ -88,7 +88,7 @@ function shuffleInPlace(arr) {
   }
   return arr;
 }
-/** pick k distinct symbols for a single column using weights */
+
 function pickKDistinctWeighted(symbols, weightsObj, k) {
   const pool = symbols.slice();
   const weights = pool.map((s) => weightsObj[s] ?? 1);
@@ -107,6 +107,7 @@ function pickKDistinctWeighted(symbols, weightsObj, k) {
   }
   return picks;
 }
+
 function generateBoard(symbols, weightsObj) {
   const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
   for (let c = 0; c < COLS; c++) {
@@ -114,11 +115,13 @@ function generateBoard(symbols, weightsObj) {
     shuffleInPlace(picks);
     for (let r = 0; r < ROWS; r++) grid[r][c] = picks[r];
   }
-  return grid; // [row][col] => filename
+  return grid;
 }
+
 function firstKCellsForLine(line, k) {
-  return Array.from({ length: k }, (_, i) => [line[i], i]); // [row,col]
+  return Array.from({ length: k }, (_, i) => [line[i], i]);
 }
+
 function evaluateWins(grid) {
   const wins = [];
   if (!grid) return wins;
@@ -145,15 +148,12 @@ function evaluateWins(grid) {
   return wins;
 }
 
-// --- helper: additive wild rule (Doghouse 2x/3x) ---
 function lineWinWithWilds({ symbolsOnLine, totalBet, payouts }) {
-  // symbolsOnLine: [{ key: "dog.png" | WILD_KEY, mult?: 2|3 }, ...] (left→right)
   const baseKey = symbolsOnLine.find((c) => c && c.key !== WILD_KEY)?.key;
   if (!baseKey || !payouts[baseKey]) {
     return { baseKey: null, count: 0, baseWin: 0, wildMults: [], winAmount: 0 };
   }
 
-  // count contiguous from the left while (cell is base OR wild)
   let count = 0;
   const used = [];
   for (const cell of symbolsOnLine) {
@@ -166,15 +166,12 @@ function lineWinWithWilds({ symbolsOnLine, totalBet, payouts }) {
     }
   }
 
-  // payout tier (3/4/5 of the base symbol) as multiplier × totalBet
-  const tierMult = payouts[baseKey]?.[count]; // e.g. {3:0.25,4:0.75,5:3.75}
+  const tierMult = payouts[baseKey]?.[count];
   if (!tierMult) {
     return { baseKey, count, baseWin: 0, wildMults: [], winAmount: 0 };
   }
 
   const baseWin = tierMult * totalBet;
-
-  // additive wilds: 2x+3x = 5× base (no wilds → factor=1)
   const wildMults = used
     .filter((c) => c.key === WILD_KEY && (c.mult === 2 || c.mult === 3))
     .map((c) => c.mult);
@@ -189,20 +186,18 @@ function lineWinWithWilds({ symbolsOnLine, totalBet, payouts }) {
     winAmount: baseWin * factor,
   };
 }
+
 function computeTotalWin({ board, wild, totalBet }) {
   let amount = 0;
   const items = [];
 
   for (let i = 0; i < PAYLINES.length; i++) {
     const rowIdxs = PAYLINES[i];
-
-    // build the 5 cells on this payline with { key, mult }
     const symbolsOnLine = Array.from({ length: COLS }, (_, c) => {
       const r = rowIdxs[c];
       return { key: board[r][c], mult: wild[r][c] || undefined };
     });
 
-    // uses your additive wild rule (already defined above)
     const res = lineWinWithWilds({
       symbolsOnLine,
       totalBet,
@@ -212,7 +207,7 @@ function computeTotalWin({ board, wild, totalBet }) {
     if (res.winAmount > 0) {
       amount += res.winAmount;
       items.push({
-        img: `clear_symbols/${res.baseKey}`, // BetControls expects "symbols/<img>"
+        img: `clear_symbols/${res.baseKey}`,
         count: res.count,
         amount: res.winAmount,
       });
@@ -226,105 +221,83 @@ function computeTotalWin({ board, wild, totalBet }) {
 /** ---------------- component ---------------- */
 const SlotBoard = forwardRef(function SlotBoard(
   {
-    imagesPath = "/symbols/clear_symbols", // kept for compatibility
     weights = DEFAULT_WEIGHTS,
     totalBet = 0,
     onWin,
     onBoardStateChange,
-    className = "",
     frameSrc = "/bet_bg.png",
     showFrame = true,
-    frameScale = 1.2,
-    symbolsBoxClassName = "top-20 w-[74%] h-[65%] border border-white/10",
-    symbolsBoxStyle,
-    // reel timing (matches your older project feel)
-    startStaggerMs = 120, // cascade the reel spin start
-    stopBaseMs = 2000, // first reel stop time
-    stopStepMs = 800, // extra per subsequent reel
+    frameScale = 1.25,
+    startStaggerMs = 120,
+    stopBaseMs = 2000,
+    stopStepMs = 800,
   },
   ref
 ) {
   const [wildMult, setWildMult] = useState(
     Array.from({ length: ROWS }, () => Array(COLS).fill(null))
   );
+  const [board, setBoard] = useState(null);
+  const [reelSpin, setReelSpin] = useState(Array(COLS).fill(false));
+  const [spinningAll, setSpinningAll] = useState(false);
 
-  // measure box height to compute cell size
   const boxRef = useRef(null);
-  const [cellSize, setCellSize] = useState(120);
-  // measure box to compute cell size (fits both width and height, includes gaps)
+  const [cellSize, setCellSize] = useState(100);
+  const [gap, setGap] = useState(6);
+  const [padding, setPadding] = useState(10);
+
+  // 🔸 адаптация под 16:9 слот
   useEffect(() => {
     const recalc = () => {
       if (!boxRef.current) return;
       const w = boxRef.current.clientWidth;
-      const h = boxRef.current.clientHeight;
+      const h = (w / 16) * 9; // 16:9
 
-      // fit by width (cols) and by height (rows), subtracting the gaps
-      const sizeByW = Math.floor((w - (COLS - 1) * 7) / COLS);
-      const sizeByH = Math.floor((h - (ROWS - 1) * 7) / ROWS);
+      boxRef.current.style.height = `${h}px`;
 
-      // clamp to keep it crisp on small/large screens
-      const size = Math.max(56, Math.min(160, Math.min(sizeByW, sizeByH)));
+      const isMobile = window.innerWidth < 640;
+      const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
+      const baseGap = isMobile ? 25 : isTablet ? 50 : 72;
+      const pad = isMobile ? 6 : 10;
+
+      const gridW = w * 0.85;
+      const gridH = h * 0.75;
+      const sizeByW = (gridW - (COLS - 1) * baseGap) / COLS;
+      const sizeByH = (gridH - (ROWS - 1) * baseGap) / ROWS;
+      const size = Math.min(sizeByW, sizeByH);
+
       setCellSize(size);
+      setGap(baseGap);
+      setPadding(pad);
     };
 
     const ro = new ResizeObserver(recalc);
     if (boxRef.current) ro.observe(boxRef.current);
+    window.addEventListener("resize", recalc);
     recalc();
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", recalc);
+    };
   }, []);
 
-  const [mounted, setMounted] = useState(false);
-  const [board, setBoard] = useState(null); // visible final grid
-  const [reelSpin, setReelSpin] = useState(Array(COLS).fill(false)); // per-reel spinning
-  const [spinningAll, setSpinningAll] = useState(false); // master flag for UI
-
-  const timeoutsRef = useRef([]);
-  const clearTimers = () => {
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
-  };
-  useEffect(() => () => clearTimers(), []);
-
-  useEffect(() => {
-    setMounted(true);
-    if (!board) {
-      const first = generateBoard(SYMBOLS, weights);
-      setBoard(first);
-    }
-  }, [board, weights]);
-
-  // build result columns (3 symbols per column)
-  const resultColumns = useMemo(() => {
-    if (!board)
-      return Array.from({ length: COLS }, () =>
-        Array.from({ length: ROWS }, () => ({ key: "", img: "" }))
-      );
-    return Array.from({ length: COLS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) => {
-        const name = board[r][c]; // filename e.g. "doghouse.png"
-
-        return {
-          key: toKey(name),
-          img: clearPath(name),
-          mult: wildMult[r][c] || undefined, // ← badge source
-        };
-      })
-    );
-  }, [board, wildMult]);
-
-  // build blurred spinning strips (regenerated each spin start)
+  // --- core logic ---
   const makeBlurStrip = () => {
-    const L = 50; // length of a strip
+    const L = 40;
     return Array.from({ length: L }, () => {
       const n = SYMBOLS[rngInt(SYMBOLS.length)];
-      return { key: toKey(n), img: blurPath(n) };
+      return { key: n, img: blurPath(n) };
     });
   };
+
   const [blurStrips, setBlurStrips] = useState(
     Array.from({ length: COLS }, makeBlurStrip)
   );
 
-  // wins highlight
+  useEffect(() => {
+    if (!board) setBoard(generateBoard(SYMBOLS, weights));
+  }, [board, weights]);
+
   const wins = useMemo(() => evaluateWins(board), [board]);
   const winningKeySet = useMemo(() => {
     const set = new Set();
@@ -332,118 +305,95 @@ const SlotBoard = forwardRef(function SlotBoard(
     return set;
   }, [wins]);
 
-  // EXPOSED API
+  const resultColumns = useMemo(() => {
+    if (!board)
+      return Array.from({ length: COLS }, () =>
+        Array.from({ length: ROWS }, () => ({ key: "", img: "" }))
+      );
+    return Array.from({ length: COLS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) => ({
+        key: board[r][c],
+        img: clearPath(board[r][c]),
+        mult: wildMult[r][c],
+      }))
+    );
+  }, [board, wildMult]);
+
   useImperativeHandle(ref, () => ({
-    tumbleAll: ({ speedMultiplier = 1 } = {}) => {
-      if (spinningAll || !mounted) return false;
-      startSpin(Math.max(1, Number(speedMultiplier) || 1));
+    tumbleAll: () => {
+      if (spinningAll) return false;
+      startSpin();
       return true;
     },
   }));
 
-  // main spin orchestrator — EXACT reel pattern:
-  const startSpin = useCallback(
-    (speed) => {
-      onBoardStateChange?.("spinning");
-      setSpinningAll(true);
+  const startSpin = useCallback(() => {
+    onBoardStateChange?.("spinning");
+    setSpinningAll(true);
+    setBlurStrips(Array.from({ length: COLS }, makeBlurStrip));
+    setReelSpin(Array(COLS).fill(true));
 
-      // fresh blur strips each spin
-      setBlurStrips(Array.from({ length: COLS }, makeBlurStrip));
-
-      // all reels start spinning (with CSS animationDelay per reel)
-      setReelSpin(Array(COLS).fill(true));
-
-      // compute next result now (deterministic result)
-      const next = generateBoard(SYMBOLS, weights);
-      // Precompute which doghouses are 2x vs 3x for the NEXT board
-      const wildNext = Array.from({ length: ROWS }, () =>
-        Array(COLS).fill(null)
-      );
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          if (next[r][c] === "doghouse.png") {
-            wildNext[r][c] = Math.random() < 0.7 ? 2 : 3; // 70% 2x, 30% 3x
-          }
-        }
-      }
-
-      // stopping schedule (scaled if you later want to use speed)
-      const base = stopBaseMs; // could scale with 1/speed if desired
-      const step = stopStepMs;
-
-      for (let c = 0; c < COLS; c++) {
-        const t = setTimeout(() => {
-          // stop this reel
-          setReelSpin((prev) => {
-            const arr = [...prev];
-            arr[c] = false;
-            return arr;
-          });
-          // reveal this column of the next result
-          setBoard((prev) => {
-            const grid = prev
-              ? prev.map((row) => [...row])
-              : Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-            for (let r = 0; r < ROWS; r++) grid[r][c] = next[r][c];
-            return grid;
-          });
-          // 3) reveal this column's WILD multipliers (so Cell can show 2x/3x)
-          setWildMult((prev) => {
-            const grid = prev
-              ? prev.map((row) => [...row])
-              : Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-            for (let r = 0; r < ROWS; r++) grid[r][c] = wildNext[r][c];
-            return grid;
-          });
-          // after last reel stops, finish
-          if (c === COLS - 1) {
-            setSpinningAll(false);
-            // compute payout now that the full board & wildNext are known
-            const finalPayout = computeTotalWin({
-              board: next,
-              wild: wildNext,
-              totalBet,
-            });
-            onWin?.(finalPayout);
-            onBoardStateChange?.("idle");
-          }
-        }, base + c * step);
-        timeoutsRef.current.push(t);
-      }
-    },
-    [onBoardStateChange, onWin, totalBet, weights, stopBaseMs, stopStepMs]
-  );
-  // Pick 2x or 3x for each doghouse in the stopped grid
-  function decorateWildsInResult(resultColumns) {
-    // resultColumns: Array<column> where column = Array<{ key, img, ... }>
-    return resultColumns.map((col) =>
-      col.map((cell) => {
-        if (cell.key === "doghouse.png") {
-          const mult = Math.random() < 0.7 ? 2 : 3; // tweak probability if you want
-          // use CLEAR asset for stopped state; keep same `img` path logic you already have
-          return { ...cell, mult }; // Cell.jsx will render the badge
-        }
-        return cell;
-      })
+    const next = generateBoard(SYMBOLS, weights);
+    const wildNext = Array.from({ length: ROWS }, () =>
+      Array(COLS).fill(null)
     );
-  }
-  const WILD_KEY = "doghouse.png";
 
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (next[r][c] === WILD_KEY) {
+          wildNext[r][c] = Math.random() < 0.7 ? 2 : 3;
+        }
+      }
+    }
+
+    for (let c = 0; c < COLS; c++) {
+      setTimeout(() => {
+        setReelSpin((prev) => {
+          const arr = [...prev];
+          arr[c] = false;
+          return arr;
+        });
+
+        setBoard((prev) => {
+          const g = prev
+            ? prev.map((r) => [...r])
+            : Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+          for (let r = 0; r < ROWS; r++) g[r][c] = next[r][c];
+          return g;
+        });
+
+        setWildMult((prev) => {
+          const g = prev
+            ? prev.map((r) => [...r])
+            : Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+          for (let r = 0; r < ROWS; r++) g[r][c] = wildNext[r][c];
+          return g;
+        });
+
+        if (c === COLS - 1) {
+          setSpinningAll(false);
+          const payout = computeTotalWin({ board: next, wild: wildNext, totalBet });
+          onWin?.(payout);
+          onBoardStateChange?.("idle");
+        }
+      }, stopBaseMs + c * stopStepMs);
+    }
+  }, [onBoardStateChange, onWin, weights, stopBaseMs, stopStepMs, totalBet]);
+
+  /** render **/
   return (
     <div
-      className={
-        "relative mx-auto " +
-        (className || " w-[min(94vw,1200px)] aspect-[5/3] ")
-      }
+      ref={boxRef}
+      className="
+        relative mb-[5%] w-full max-w-[1200px] mx-auto aspect-[16/9]
+        flex items-center justify-center
+      "
     >
-      {/* Frame behind symbols */}
+      {/* background */}
       {showFrame && (
         <div
-          className="absolute inset-0 pointer-events-none select-none z-0 bottom-20"
-          style={{
-            transform: `scale(${frameScale})`,
-            transformOrigin: "center",
-          }}
+          className="absolute inset-0 pointer-events-none select-none z-0"
+          style={{ transform: `scale(${frameScale})` }}
         >
           <Image
             src={frameSrc}
@@ -452,65 +402,127 @@ const SlotBoard = forwardRef(function SlotBoard(
             className="object-contain"
             priority={false}
           />
+          <div className="block sm:hidden absolute top-[-30%] left-5 w-full z-10 flex justify-center pointer-events-none select-none">
+            <div className="relative w-[70vw] max-w-[700px]">
+              <Image
+                src="/loading_part.png"
+                alt="dogs"
+                width={700}
+                height={260}
+                className="w-full h-auto object-contain"
+                priority
+                sizes="90vw"
+              />
+            </div>
+          </div>
+          <div className="block absolute sm:top-[12%] left-0 w-full z-10 flex justify-center pointer-events-none select-none">
+            <div className="relative w-[70vw] max-w-[700px]">
+              <Image
+                src="/logo_jp.png"
+                alt="dogs"
+                width={700}
+                height={260}
+                className="w-full h-auto object-contain"
+                priority
+                sizes="90vw"
+              />
+            </div>
+          </div>
+          <div className="block absolute sm:top-[80%] right-[35%] top-[80%] right-[35%] w-full z-10 flex justify-center pointer-events-none select-none">
+            <div className="relative w-[70vw] max-w-[6%]">
+              <Image
+                src="/grass_1.png"
+                alt="grass"
+                width={50}
+                height={50}
+                className="w-full h-auto object-contain animate_rounded_normal"
+                priority
+                sizes="20vw"
+              />
+            </div>
+          </div>
+          <div className="block absolute sm:top-[80%] left-[15%] top-[80%] left-[33%] w-full z-10 flex justify-center pointer-events-none select-none">
+            <div className="relative w-[20vw] max-w-[6%]">
+              <Image
+                src="/grass_1.png"
+                alt="grass"
+                width={50}
+                height={50}
+                className="w-full h-auto object-contain animate_rounded"
+                priority
+                sizes="20vw"
+              />
+            </div>
+          </div>
+          <div className="block absolute sm:top-[12%] left-0 w-full z-10 flex justify-center pointer-events-none select-none">
+            <div className="relative w-[70vw] max-w-[700px]">
+              <Image
+                src="/logo_jp.png"
+                alt="dogs"
+                width={700}
+                height={260}
+                className="w-full h-auto object-contain"
+                priority
+                sizes="90vw"
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* SYMBOLS PARENT BOX */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center">
+      {/* grid */}
+      <div
+        className="absolute inset-x-0 top-[37%] bottom-0 z-10 flex items-center justify-center"
+      >
         <div
-          ref={boxRef}
-          className={"relative overflow-hidden " + (symbolsBoxClassName || "")}
-          style={symbolsBoxStyle}
+          className="relative overflow-hidden rounded-xl border border-white/10 "
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)`,
+            gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
+            gap: `${gap}px`,
+            padding: `${padding}px`,
+          }}
         >
-          {/* Reels row */}
-          <div
-            className="absolute inset-0 grid "
-            style={{
-              gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)`,
-              gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
-              gap: `${GAP}px`,
-            }}
-          >
-            {Array.from({ length: COLS }, (_, c) => (
-              <Reel
-                key={c}
-                spinning={reelSpin[c]}
-                visibleRows={ROWS}
-                cellSize={cellSize}
-                strip={blurStrips[c]}
-                resultColumn={resultColumns[c] || []}
-                startDelayMs={c * startStaggerMs}
-                cellGapPx={7}
-              />
-            ))}
-          </div>
+          {Array.from({ length: COLS }, (_, c) => (
+            <Reel
+              key={c}
+              spinning={reelSpin[c]}
+              visibleRows={ROWS}
+              cellSize={cellSize}
+              strip={blurStrips[c]}
+              resultColumn={resultColumns[c]}
+              startDelayMs={c * startStaggerMs}
+              cellGapPx={gap}
+            />
+          ))}
 
-          {/* Win overlay rings when idle */}
-          {!spinningAll && board ? (
-            <div
-              className="pointer-events-none absolute inset-0 grid"
-              style={{
-                gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)`,
-                gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
-                gap: `${GAP}px`,
-              }}
-            >
-              {Array.from({ length: ROWS }).map((_, r) =>
-                Array.from({ length: COLS }).map((_, c) => {
-                  const k = `${r}-${c}`;
-                  return (
-                    <div
-                      key={k}
-                      className={
-                        "rounded " +
-                        (winningKeySet.has(k) ? " ring-4 ring-amber-400 " : "")
-                      }
-                    />
-                  );
-                })
-              )}
-            </div>
-          ) : null}
+          {/* glowing win rings */}
+          {!spinningAll &&
+            Array.from({ length: ROWS }).map((_, r) =>
+              Array.from({ length: COLS }).map((_, c) => {
+                const k = `${r}-${c}`;
+                const ring = winningKeySet.has(k);
+                const ringSize =
+                  cellSize > 80 ? 4 : cellSize > 50 ? 3 : 2;
+                return (
+                  <div
+                    key={k}
+                    className={`absolute rounded transition-all duration-300 ${
+                      ring
+                        ? `ring-${ringSize} ring-yellow-400 shadow-lg shadow-yellow-300/40 animate-pulse`
+                        : ""
+                    }`}
+                    style={{
+                      width: cellSize,
+                      height: cellSize,
+                      top: r * (cellSize + gap) + padding,
+                      left: c * (cellSize + gap) + padding,
+                    }}
+                  />
+                );
+              })
+            )}
         </div>
       </div>
     </div>

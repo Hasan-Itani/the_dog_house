@@ -26,9 +26,11 @@ export function Reel({
   const [stopped, setStopped] = useState(false);
 
   // Height should include row gaps only when NOT spinning (the grid shows gaps)
+  const scale = 1.0; // 👈 уменьшаем reel примерно на 8%
   const reelHeight = useMemo(
     () =>
-      visibleRows * cellSize + (!spinning ? (visibleRows - 1) * cellGapPx : 0),
+      visibleRows * cellSize * scale +
+      (!spinning ? (visibleRows - 1) * cellGapPx : 0),
     [visibleRows, cellSize, cellGapPx, spinning]
   );
 
@@ -43,28 +45,29 @@ export function Reel({
   return (
     <div
       className="relative overflow-hidden"
-      style={{ width: cellSize, height: reelHeight }}
+      style={{ width: cellSize * scale, height: reelHeight }}
     >
       {spinning ? (
         <div
           className="absolute inset-0"
           style={{
             maskImage:
-              "linear-gradient(transparent, black 18%, black 82%, transparent)",
+              "linear-gradient(transparent, black 25%, black 75%, transparent)",
             WebkitMaskImage:
-              "linear-gradient(transparent, black 18%, black 82%, transparent)",
+              "linear-gradient(transparent, black 25%, black 75%, transparent)",
           }}
         >
           <div
-            className="h-[200%]"
+            className="h-[450%]" // ← было 300%
             style={{
-              animation: "reel-spin 500ms linear infinite",
+              animation: "reel-spin 450ms linear infinite", // ← скорость чуть выше
               animationDelay: `${startDelayMs}ms`,
-              animationDirection: "reverse", // downwards movement
+              animationDirection: "reverse",
             }}
           >
-            <Strip strip={strip} cellSize={cellSize} />
-            <Strip strip={strip} cellSize={cellSize} />
+            {/* уменьшаем символы в blur на 10% */}
+            <Strip strip={strip} cellSize={cellSize * 0.9} />
+            <Strip strip={strip} cellSize={cellSize * 0.9} />
           </div>
         </div>
       ) : (

@@ -1,11 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { payoutTable } from "../hooks/payoutTable"; // multipliers × TOTAL BET
 
-export default function GameRulesPopup({ onClose, totalBet = 0 }) {
+export default function GameRulesPopup({ onClose }) {
   const [page, setPage] = useState(1);
-  const totalPages = 7;
+  const totalPages = 6;
 
   const containerRef = useRef(null);
   const touchStartXRef = useRef(0);
@@ -40,268 +39,195 @@ export default function GameRulesPopup({ onClose, totalBet = 0 }) {
     };
   }, []);
 
-  // --- dynamic pay lines (× TOTAL BET) ---
-  const fmt$ = (n) =>
-    `$${(Number(n) || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-
-  const SYMBOLS = [
-    { key: "dog.png", name: "Dog" },
-    { key: "milu.png", name: "Milo" },
-    { key: "pug.png", name: "Pug" },
-    { key: "taxa.png", name: "Taxa" },
-    { key: "collar.png", name: "Collar" },
-    { key: "bone.png", name: "Bone" },
-    { key: "a.png", name: "A" },
-    { key: "k.png", name: "K" },
-    { key: "q.png", name: "Q" },
-    { key: "j.png", name: "J" },
-    { key: "ten.png", name: "10" },
-  ];
-
-  const rows = useMemo(() => {
-    const t = Number(totalBet) || 0;
-    return SYMBOLS.map(({ key, name }) => {
-      const row = payoutTable[key] || {};
-      // thresholds: 15,14,...,5 descending
-      const thresholds = Object.keys(row)
-        .map(Number)
-        .sort((a, b) => b - a);
-      const lines = thresholds.map((th) => {
-        const label = th === 15 ? "15–36" : String(th);
-        const amount = (row[th] || 0) * t;
-        return `${label} → ${fmt$(+amount.toFixed(2))}`;
-      });
-      return { key, name, lines };
-    });
-  }, [totalBet]);
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="rules-title"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
       <div
         ref={containerRef}
-        className="relative w-full max-w-5xl h-[92vh] sm:h-auto sm:max-h-[90vh] bg-[#111] text-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        className="relative w-full max-w-5xl h-[92vh] bg-[#111] text-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
       >
+        {/* HEADER */}
         <div className="sticky top-0 z-10 bg-[#111]/95 backdrop-blur px-5 sm:px-8 py-4 border-b border-white/10">
           <button
             onClick={onClose}
-            className="absolute right-3 top-3 sm:right-4 sm:top-4 text-2xl leading-none opacity-80 hover:opacity-100"
-            aria-label="Close"
+            className="absolute right-3 top-3 text-2xl opacity-80 hover:opacity-100"
           >
             ✕
           </button>
-          <h2
-            id="rules-title"
-            className="text-center text-yellow-400 font-extrabold text-xl sm:text-2xl"
-          >
-            GAME RULES
+          <h2 className="text-center text-yellow-400 font-extrabold text-xl sm:text-2xl">
+            GAME RULES — Page {page}/6
           </h2>
         </div>
 
-        <div className="px-4 sm:px-8 py-5 sm:py-6 overflow-y-auto h-[70vh] custom-scroll">
-          <div className="flex flex-col items-center justify-start gap-4 w-full">
-            {page === 1 && (
-              <>
-                <p className="text-center text-gray-300 mb-2 text-sm sm:text-base">
-                  All symbols pay in blocks of minimum 5 symbols connected
-                  horizontally or vertically.
-                  <br className="hidden sm:block" />
-                  The game is played on a 6×6 grid of symbols.
-                </p>
+        {/* CONTENT */}
+        <div className="px-6 py-6 overflow-y-auto text-sm sm:text-base leading-relaxed space-y-5 flex-1 min-h-[500px]">
+          {page === 1 && (
+            <>
+              <h3 className="text-yellow-400 font-bold text-lg text-center">
+                SYMBOL PAYTABLE
+              </h3>
+              <p className="text-center text-gray-300">
+                All symbols pay from left to right on adjacent reels starting
+                from the leftmost reel.
+              </p>
 
-                <p className="text-center text-xs sm:text-sm text-gray-400 -mt-1 mb-1">
-                  Payouts below are shown for your current <b>Total Bet</b>:{" "}
-                  {fmt$(totalBet)}
-                </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-gray-200 mt-4">
+                <Symbol icon="/symbols/clear_symbols/dog.png" label="Rottweiler" values="5 × 7.50  4 × 1.50  3 × 0.50" />
+                <Symbol icon="/symbols/clear_symbols/milu.png" label="Maltese" values="5 × 5.00  4 × 1.00  3 × 0.30" />
+                <Symbol icon="/symbols/clear_symbols/pug.png" label="Pug" values="5 × 3.00  4 × 0.60  3 × 0.20" />
+                <Symbol icon="/symbols/clear_symbols/taxa.png" label="Beagle" values="5 × 2.00  4 × 0.40  3 × 0.20" />
+                <Symbol icon="/symbols/clear_symbols/collar.png" label="Collar" values="5 × 1.50  4 × 0.25  3 × 0.12" />
+                <Symbol icon="/symbols/clear_symbols/bone.png" label="Bone" values="5 × 1.00  4 × 0.20  3 × 0.08" />
+                <Symbol icon="/symbols/clear_symbols/a.png" label="A" values="5 × 0.50  4 × 0.10  3 × 0.05" />
+                <Symbol icon="/symbols/clear_symbols/k.png" label="K" values="5 × 0.50  4 × 0.10  3 × 0.05" />
+                <Symbol icon="/symbols/clear_symbols/q.png" label="Q" values="5 × 0.25  4 × 0.05  3 × 0.02" />
+                <Symbol icon="/symbols/clear_symbols/j.png" label="J" values="5 × 0.25  4 × 0.05  3 × 0.02" />
+                <Symbol icon="/symbols/clear_symbols/ten.png" label="10" values="5 × 0.25  4 × 0.05  3 × 0.02" />
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 text-[13px] sm:text-[14px] w-full">
-                  {rows.map(({ key, name, lines }) => (
-                    <SymbolPayout
-                      key={key}
-                      src={`/symbols/clear_symbols/${key}`}
-                      alt={name}
-                      lines={lines}
-                    />
-                  ))}
-
-                  <div className="sm:col-span-2 md:col-span-3 lg:col-span-4 text-center mt-1">
-                    <div className="inline-flex items-center gap-4">
-                      <Image
-                        src="/symbols/clear_symbols/doghouse.png"
-                        alt="Scatter"
-                        width={72}
-                        height={72}
-                        className="mx-auto"
-                      />
-                      <p className="text-gray-300 text-sm sm:text-base">
-                        This is the SCATTER symbol. It can appear on all reels.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* --- the rest of your pages unchanged --- */}
-            {page === 2 && (
-              <div className="text-gray-300 text-sm sm:text-base leading-relaxed space-y-4 text-left">
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  TUMBLE FEATURE
-                </h3>
+              <div className="mt-5 text-gray-300">
+                <h4 className="text-yellow-400 font-semibold">WILD SYMBOL</h4>
                 <p>
-                  After every spin, winning combinations are paid and all
-                  winning symbols disappear except for SCATTER. Remaining
-                  symbols fall to the bottom and empty positions are replaced by
-                  new ones from above. Tumbling continues until no more winning
-                  combos appear. All wins are added after all tumbles from a
-                  base spin.
-                </p>
-
-                <h3 className="text-center font-bold text-lg text-yellow-400 mt-6">
-                  POWER WILDS
-                </h3>
-                <p>
-                  The WILD substitutes all symbols except SCATTER. Each WILD has
-                  a clearance level (1–10). Every time it’s part of a win, the
-                  level decreases by 1. WILDS remain until their level reaches 1
-                  and they are part of a winning combo, then they explode.
+                  The WILD substitutes for all symbols except BONUS. It appears
+                  only on reels 2, 3, and 4. Each WILD has a random multiplier
+                  of 2× or 3×. If more than one WILD appears in a win, their
+                  multipliers are added together.
                 </p>
               </div>
-            )}
+            </>
+          )}
 
-            {page === 3 && (
-              <div className="text-gray-300 text-sm sm:text-base leading-relaxed space-y-4 text-left">
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  FREE SPINS
-                </h3>
-                <p>
-                  Hit 3+ SCATTERS to trigger 8 free spins. Each triggering
-                  SCATTER also pays 1x bet. During free spins, WILDS remain
-                  between spins. The POWER UP symbol appears, adding +1–3
-                  randomly to clearance levels of all WILDS.
-                </p>
-                <p>
-                  Hit 2+ SCATTERS during free spins to retrigger. Extra spins =
-                  SCATTERS hit + 1. Special reels apply.
-                </p>
-
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  MAX WIN
-                </h3>
-                <p>
-                  Max win is 5,000x bet. If reached, the round ends immediately,
-                  win is awarded, and all features are forfeited.
-                </p>
-
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  BUY FREE SPINS
-                </h3>
-                <p>Instantly trigger free spins for 100x current bet.</p>
-              </div>
-            )}
-
-            {page === 4 && (
-              <div className="text-gray-300 text-sm sm:text-base leading-relaxed space-y-4 text-left">
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  GAME RULES
-                </h3>
-                <p>
-                  High volatility game: fewer payouts on average but higher
-                  chance of big wins in short spans.
-                </p>
-                <ul className="list-disc pl-6 space-y-1">
-                  <li>Only highest win per combination is paid.</li>
-                  <li>
-                    All wins are multiplied by <b>Total Bet</b>.
-                  </li>
-                  <li>All values shown as coins.</li>
-                  <li>Free Spins total win is awarded after the round ends.</li>
-                </ul>
-                <p>
-                  RTP: 96.49% (96.50% when buying free spins). Min bet: $0.20 |
-                  Max bet: $240.00
-                </p>
-                <p>
-                  SPACE / ENTER can spin. Malfunction voids all pays and plays.
+          {page === 2 && (
+            <>
+              <h3 className="text-yellow-400 font-bold text-lg text-center">
+                BONUS SYMBOL & FREE SPINS
+              </h3>
+              <div className="flex items-center justify-center gap-3 mt-2">
+                <Image
+                  src="/symbols/clear_symbols/doghouse.png"
+                  alt="Bonus symbol"
+                  width={70}
+                  height={70}
+                />
+                <p className="text-gray-300">
+                  The BONUS symbol appears only on reels 1, 3 and 5. Hitting 3 BONUS
+                  symbols triggers the <b>Free Spins Round</b> and pays 5× total bet.
                 </p>
               </div>
-            )}
 
-            {page === 5 && (
-              <div className="text-gray-300 text-sm sm:text-base leading-relaxed space-y-4 text-left">
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  HOW TO PLAY
-                </h3>
-                <p>Use + / – buttons to set your bet, then press SPIN.</p>
+              <h4 className="text-yellow-400 font-semibold mt-4">
+                FREE SPINS RULES
+              </h4>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>
+                  A 3×3 grid reveals random free spins (1–3 each). Their sum
+                  determines the number of awarded spins.
+                </li>
+                <li>
+                  During the Free Spins, all WILD symbols on reels 2, 3, or 4
+                  remain sticky until the end of the feature.
+                </li>
+                <li>
+                  Sticky WILDs have random multipliers (2× or 3×).
+                </li>
+                <li>
+                  BONUS symbols are not present in Free Spins. The feature cannot
+                  be retriggered.
+                </li>
+              </ul>
+            </>
+          )}
 
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  MAIN GAME INTERFACE
-                </h3>
-                <ul className="list-disc pl-6 space-y-1">
-                  <li>⚙ Opens settings menu.</li>
-                  <li>⏩ Cycles spin speeds (normal, quick, turbo).</li>
-                  <li>🔊 Toggles sound/music.</li>
-                  <li>ℹ Opens info page.</li>
-                  <li>CREDIT / BET show balance and bet.</li>
-                  <li>⟳ Starts the game.</li>
-                  <li>AUTOPLAY opens/ends auto spin menu.</li>
-                </ul>
-              </div>
-            )}
+          {page === 3 && (
+            <>
+              <h3 className="text-yellow-400 font-bold text-lg text-center">
+                PAYLINES & GAME INFO
+              </h3>
+              <p>
+                High volatility game — fewer payouts on average but with higher
+                win potential in shorter periods.
+              </p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>All symbols pay from left to right on paylines.</li>
+                <li>Free Spins wins are added to line wins.</li>
+                <li>All wins are multiplied by bet per line.</li>
+                <li>Only the highest win is paid per line.</li>
+                <li>Wins on multiple paylines are added to total win.</li>
+              </ul>
+              <p className="mt-4 text-gray-300">
+                <b>RTP:</b> 96.51%  
+                <br />
+                <b>Min Bet:</b> $0.20 | <b>Max Bet:</b> $100.00
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                SPACE / ENTER can spin. Malfunction voids all pays and plays.
+              </p>
+            </>
+          )}
 
-            {page === 6 && (
-              <div className="text-gray-300 text-sm sm:text-base leading-relaxed space-y-4 text-left">
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  SETTINGS MENU
-                </h3>
-                <ul className="list-disc pl-6 space-y-1">
-                  <li>Quick Spin – auto spin until release.</li>
-                  <li>Intro Screen – toggle intro.</li>
-                  <li>Ambient – toggle background music/sounds.</li>
-                  <li>Sound FX – toggle game effects.</li>
-                  <li>Game History – open past results.</li>
-                </ul>
+          {page === 4 && (
+            <>
+              <h3 className="text-yellow-400 font-bold text-lg text-center">
+                HOW TO PLAY
+              </h3>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Use + / – to change bet value.</li>
+                <li>Select the bet and press SPIN to play.</li>
+              </ul>
 
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  INFORMATION SCREEN
-                </h3>
-                <p>◀ ▶ scroll pages | ✕ close screen</p>
+              <h3 className="text-yellow-400 font-bold text-lg text-center mt-5">
+                MAIN GAME INTERFACE
+              </h3>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>☰ Opens SETTINGS menu.</li>
+                <li>🌀 Cycles spin speeds (normal / quick / turbo).</li>
+                <li>🔊 Toggles sound and music on/off.</li>
+                <li>ℹ Opens Information page.</li>
+                <li>⟳ Starts the game.</li>
+                <li>AUTOPLAY opens automatic play menu.</li>
+              </ul>
+            </>
+          )}
 
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  BET MENU
-                </h3>
-                <p>Change bet multiplier and values. Max win = 5000x bet.</p>
-              </div>
-            )}
+          {page === 5 && (
+            <>
+              <h3 className="text-yellow-400 font-bold text-lg text-center">
+                SETTINGS MENU
+              </h3>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>QUICK SPIN – starts reels automatically and stops instantly.</li>
+                <li>INTRO SCREEN – toggles intro on/off.</li>
+                <li>AMBIENT – toggles ambient music and sounds.</li>
+                <li>SOUND FX – toggles game sound effects.</li>
+                <li>GAME HISTORY – opens past rounds.</li>
+              </ul>
 
-            {page === 7 && (
-              <div className="text-gray-300 text-sm sm:text-base leading-relaxed space-y-4 text-left">
-                <h3 className="text-center font-bold text-lg text-yellow-400">
-                  AUTOPLAY
-                </h3>
-                <p>
-                  Choose the number of auto-spins. SKIP SCREENS option skips
-                  feature intro/end screens after a short time.
-                </p>
-              </div>
-            )}
-          </div>
+              <h3 className="text-yellow-400 font-bold text-lg text-center mt-5">
+                BET MENU
+              </h3>
+              <p>Shows number of lines and total bet in coins and cash. Use + / – to adjust values.</p>
+            </>
+          )}
+
+          {page === 6 && (
+            <>
+              <h3 className="text-yellow-400 font-bold text-lg text-center">
+                AUTOPLAY
+              </h3>
+              <p>
+                Choose number of auto-spins to start Autoplay.  
+                SKIP SCREENS option auto-skips feature intro and end screens.
+              </p>
+            </>
+          )}
         </div>
 
+        {/* FOOTER */}
         <div className="sticky bottom-0 z-10 bg-[#111] px-4 sm:px-8 py-3 border-t border-white/10">
           <div className="flex items-center justify-center gap-6">
             <button
               onClick={prevPage}
               disabled={page === 1}
               className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40"
-              aria-label="Previous page"
             >
               ◀
             </button>
@@ -315,7 +241,6 @@ export default function GameRulesPopup({ onClose, totalBet = 0 }) {
                       ? "bg-yellow-400"
                       : "bg-white/30 hover:bg-white/60"
                   }`}
-                  aria-label={`Go to page ${n}`}
                 />
               ))}
             </div>
@@ -323,7 +248,6 @@ export default function GameRulesPopup({ onClose, totalBet = 0 }) {
               onClick={nextPage}
               disabled={page === totalPages}
               className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40"
-              aria-label="Next page"
             >
               ▶
             </button>
@@ -334,26 +258,18 @@ export default function GameRulesPopup({ onClose, totalBet = 0 }) {
   );
 }
 
-function SymbolPayout({ src, alt, lines }) {
+function Symbol({ icon, label, values }) {
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-      <div className="shrink-0 mt-0.5">
-        <Image
-          src={src}
-          alt={alt}
-          width={64}
-          height={64}
-          className="sm:w-[80px] sm:h-[80px]"
-        />
-      </div>
-      <div className="text-left leading-5">
-        <div className="font-semibold mb-1">{alt}</div>
-        <div className="text-gray-200">
-          {lines.map((l, i) => (
-            <div key={i}>{l}</div>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col items-center bg-white/5 rounded-lg p-3 text-center min-h-[130px]">
+      <Image
+        src={icon}
+        alt={label}
+        width={64}
+        height={64}
+        className="w-16 h-16 mb-2"
+      />
+      <div className="font-semibold text-white">{label}</div>
+      <div className="text-xs text-gray-300 mt-1">{values}</div>
     </div>
   );
 }

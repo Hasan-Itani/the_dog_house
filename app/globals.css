@@ -66,3 +66,52 @@ body {
     cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: var(--drop-delay, 0ms);
 }
+
+@keyframes dog-wheel {
+  0%, 100% {
+    transform: rotate(-5deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+.animate_rounded {
+  transform: scaleX(-1);
+  animation: dog-wheel 3s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+.animate_rounded_normal {
+  animation: dog-wheel 3s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+@keyframes butterfly-flap {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.95); }
+}
+
+@keyframes butterfly-path {
+  0%   { transform: translate(5vw, 10vh) rotate(-8deg); }
+  25%  { transform: translate(40vw, 30vh) rotate(6deg); }
+  50%  { transform: translate(100vw, 5vh) rotate(-5deg); }
+  75%  { transform: translate(30vw, 20vh) rotate(8deg); }
+  100% { transform: translate(5vw, 10vh) rotate(-8deg); }
+}
+
+@keyframes butterfly-flight {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.animate-butterfly-path {
+  animation: butterfly-path 18s ease-in-out infinite;
+}
+
+.animate-butterfly-flight {
+  animation: butterfly-flight 1.2s ease-in-out infinite;
+}

@@ -66,8 +66,8 @@ export function Reel({
             }}
           >
             {/* уменьшаем символы в blur на 10% */}
-            <Strip strip={strip} cellSize={cellSize * 0.9} />
-            <Strip strip={strip} cellSize={cellSize * 0.9} />
+            <Strip strip={strip} cellSize={cellSize * 1.2} />
+            <Strip strip={strip} cellSize={cellSize * 1.2} />
           </div>
         </div>
       ) : (

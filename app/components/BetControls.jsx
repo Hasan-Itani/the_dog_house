@@ -13,37 +13,33 @@ export default function BetControls({
   setTotalBet,
   canSpin = true,
   roundWin = 0,
-  // NEW: optional breakdown so center subline can show details
   lastWinItems = [],
+  winDisplay = { phase: "none", visible: false }, // ← NEW
 }) {
   const [isSpinning, setIsSpinning] = useState(false);
 
-  // единственный контроллер модалок
-  // modal: null | "settings" | "rules" | "bet"
+  // modal control
   const [modal, setModal] = useState(null);
   const isPopupOpen = modal === "bet" || modal === "settings";
-  const [betAnchored, setBetAnchored] = useState(false); // где рисовать bet popup
+  const [betAnchored, setBetAnchored] = useState(false);
 
-  // для SettingsPopup (его внутренние контролы)
-  const [totalBetSettings, setTotalBetSettings] = useState(2.0);
-
+  // bet state
   const [bet, setBet] = useState(10);
   const [coinIndex, setCoinIndex] = useState(() => {
-    const i = COIN_VALUES.indexOf(1.2); // default to $1.20 if present
+    const i = COIN_VALUES.indexOf(1.2);
     return i >= 0 ? i : COIN_VALUES.length - 1;
   });
   const coinValue = COIN_VALUES[coinIndex];
   const totalBet = bet * coinValue * LINES;
 
-  // turbo по Space/Enter
   const turboHeldRef = useRef(false);
 
-  // пробрасываем TOTAL BET наверх
+  // propagate TOTAL BET up
   useEffect(() => {
     if (typeof setTotalBet === "function") setTotalBet(totalBet);
   }, [totalBet, setTotalBet]);
 
-  // линейка TOTAL BET для +/- по общему знач.
+  // linearized total bet steps
   const allCombos = useMemo(() => {
     const arr = [];
     for (let c = 0; c < COIN_VALUES.length; c++) {
@@ -61,7 +57,7 @@ export default function BetControls({
     (c) => c.bet === bet && c.coinIndex === coinIndex
   );
 
-  // ресет локального "идёт спин", если извне можно крутить
+  // reset local “spinning” flag from parent canSpin
   useEffect(() => {
     if (canSpin) {
       setIsSpinning(false);
@@ -69,11 +65,11 @@ export default function BetControls({
     }
   }, [canSpin]);
 
-  // --- SPIN handling (with spin sequence tracker) ---
+  // SPIN
   const spinSeqRef = useRef(0);
   const handleSpin = useCallback(
     async (options = {}) => {
-      if (modal) return; // block spin when bet/settings is open
+      if (modal) return;
       if (!canSpin || isSpinning) return;
       if (credit < totalBet) return;
       setIsSpinning(true);
@@ -88,16 +84,15 @@ export default function BetControls({
     [modal, canSpin, isSpinning, credit, totalBet, onSpin]
   );
 
-  // хоткеи
+  // hotkeys
   useEffect(() => {
     const shouldIgnoreTarget = (el) => {
       if (!el) return false;
       const tag = el.tagName;
       return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
     };
-
     const handleKeyDown = (event) => {
-      if (modal) return; // block hotkeys when any modal is open
+      if (modal) return;
       if (event.code !== "Space" && event.code !== "Enter") return;
       if (shouldIgnoreTarget(event.target)) return;
       event.preventDefault();
@@ -105,21 +100,19 @@ export default function BetControls({
       const turbo = turboHeldRef.current || event.repeat;
       void handleSpin({ turbo });
     };
-
     const handleKeyUp = (event) => {
       if (event.code !== "Space" && event.code !== "Enter") return;
       turboHeldRef.current = false;
     };
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleSpin]);
+  }, [handleSpin, modal]);
 
-  // блокируем скролл фона при любой модалке
+  // block background scroll when any modal is open
   useEffect(() => {
     if (typeof document === "undefined") return;
     const el = document.documentElement;
@@ -133,38 +126,34 @@ export default function BetControls({
     setCoinIndex(COIN_VALUES.length - 1);
   };
 
-  // ===== Center banner logic (NEW) =====
+  // ===== Banner state =====
   const START_TEXT = "HOLD SPACE FOR TURBO SPIN";
   const IDLE_VARIANTS = useMemo(
     () => ["PLACE YOUR BET!", "SPIN TO WIN!", "HOLD SPACE FOR TURBO SPIN"],
     []
   );
+
   const [banner, setBanner] = useState(START_TEXT);
-  const [subline, setSubline] = useState("");
+  const [subline, setSubline] = useState(null); // can be string or JSX
   const [animatedWin, setAnimatedWin] = useState(0);
   const rafRef = useRef(0);
   const animValRef = useRef(0);
-  const lastSeenSpin = useRef(0);
 
-  // While spinning: show GOOD LUCK!
+  // while spinning show GOOD LUCK! and clear subline
   useEffect(() => {
     if (isSpinning) {
       setBanner("GOOD LUCK!");
-      setSubline("");
+      setSubline(null);
       setAnimatedWin(0);
       animValRef.current = 0;
       cancelAnimationFrame(rafRef.current);
     }
   }, [isSpinning]);
 
-  // After a spin finishes (canSpin true & a new spin was started)
-  // While spinning: still show GOOD LUCK! (kept as-is above)
-
-  // After spin / while idle: react to roundWin changes
+  // Animate “WIN $…” after a round finishes
   useEffect(() => {
     if (!canSpin || isSpinning) return;
 
-    // Win banner with animated amount
     if (roundWin > 0) {
       const target = Number(roundWin) || 0;
       const duration = Math.min(
@@ -173,16 +162,7 @@ export default function BetControls({
       );
       setBanner("WIN");
 
-      if (lastWinItems?.length === 1) {
-        const it = lastWinItems[0];
-        setSubline(`PAYS $${(it.amount ?? 0).toFixed(2)}`);
-      } else if ((lastWinItems?.length || 0) > 1) {
-        setSubline("WINNER");
-      } else {
-        setSubline("");
-      }
-
-      const from = animValRef.current || 0; // start from what’s currently shown
+      const from = animValRef.current || 0;
       const to = target;
       const t0 = performance.now();
       cancelAnimationFrame(rafRef.current);
@@ -196,18 +176,80 @@ export default function BetControls({
       };
       rafRef.current = requestAnimationFrame(tick);
     } else {
-      // No win → show one of the idle lines
-      const pick = [
-        "PLACE YOUR BET!",
-        "SPIN TO WIN!",
-        "HOLD SPACE FOR TURBO SPIN",
-      ][Math.floor(Math.random() * 3)];
+      // no win → idle tip
+      const pick =
+        IDLE_VARIANTS[Math.floor(Math.random() * IDLE_VARIANTS.length)];
       setBanner(pick);
-      setSubline("");
+      setSubline(null);
     }
-  }, [canSpin, isSpinning, roundWin, lastWinItems]);
+  }, [canSpin, isSpinning, roundWin, IDLE_VARIANTS]);
 
-  // единый BET popup (якорный или фуллскрин)
+  // ---- Subline follows the active GIF (from winDisplay) ----
+  useEffect(() => {
+    if (isSpinning || roundWin <= 0) {
+      setSubline(null);
+      return;
+    }
+    if (!winDisplay || !winDisplay.visible) {
+      setSubline(null);
+      return;
+    }
+
+    if (winDisplay.phase === "all") {
+      // First ALL after spin: WINNER; later: GAME PAYS $total
+      if (winDisplay.firstAll) setSubline("WINNER");
+      else
+        setSubline(() => (
+          <span>
+            GAME PAYS
+            <span className="text-green-400">
+              ${Number(winDisplay.roundTotal || 0).toFixed(2)}
+            </span>
+          </span>
+        ));
+      return;
+    }
+
+    if (winDisplay.phase === "one" && winDisplay.detail) {
+      const d = winDisplay.detail;
+      // tiny 3×5 matrix text
+      const rows = d.matrix
+        .map((row) => row.map((v) => (v ? "1" : "0")).join(" "))
+        .join("\n");
+
+      setSubline(() => (
+        <div className="flex items-center gap-2">
+          {(
+            d.usedSeq ??
+            Array.from({ length: d.count }).map((_, i) => ({ isWild: false }))
+          ).map((u, i) => {
+            const baseGif = `/symbols/clear_symbols/${d.symbol}`;
+            const dogGif = `/symbols/gifs/doghouse.gif`;
+            const src = u.isWild ? dogGif : baseGif;
+            return (
+              <span
+                key={i}
+                className="relative inline-block mr-1"
+                style={{ width: 24, height: 24 }}
+              >
+                <Image
+                  src={src}
+                  alt={u.isWild ? "doghouse" : d.symbol}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </span>
+            );
+          })}
+        </div>
+      ));
+      return;
+    }
+    setSubline(null);
+  }, [winDisplay, isSpinning, roundWin]);
+
+  // single popup builder reused for desktop anchored and mobile fullscreen
   const BetPopup = ({ anchored = false }) => (
     <div
       className={
@@ -364,7 +406,7 @@ export default function BetControls({
     </div>
   );
 
-  // размеры UI
+  // sizes
   const ICON_WH = "clamp(24px, 4.5vw, 36px)";
   const BIG_BTN_WH = "clamp(96px, 18vw, 160px)";
   const NUM_FONT = "clamp(16px, 3.5vw, 22px)";
@@ -378,9 +420,8 @@ export default function BetControls({
       >
         {/* ===== Desktop ===== */}
         <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-8 lg:gap-x-16 xl:gap-x-24">
-          {/* LEFT: settings over mute, info to the right, then CREDIT over BET */}
+          {/* LEFT: settings, info, credit/bet */}
           <div className="flex items-start gap-4 mt-15">
-            {/* settings / mute vertical */}
             <div className="flex flex-col items-start gap-2">
               <button
                 className="relative"
@@ -395,7 +436,6 @@ export default function BetControls({
                   className="object-contain"
                 />
               </button>
-
               <button
                 className="relative"
                 style={{ width: ICON_WH, height: ICON_WH }}
@@ -410,7 +450,6 @@ export default function BetControls({
               </button>
             </div>
 
-            {/* info to their right */}
             <button
               className="relative mt-4"
               style={{
@@ -428,7 +467,6 @@ export default function BetControls({
               />
             </button>
 
-            {/* credit over bet */}
             <div className="flex flex-col gap-1 ml-2 mt-4">
               <div className="font-bold text-white leading-none">
                 CREDIT
@@ -456,7 +494,8 @@ export default function BetControls({
               </div>
             </div>
           </div>
-          {/* CENTER: banner + conditional subline */}
+
+          {/* CENTER: banner + subline that follows GIFs */}
           <div className="flex flex-col items-center justify-center min-h-[48px] mt-14">
             <p
               className="text-white font-extrabold uppercase text-center leading-none whitespace-nowrap"
@@ -479,27 +518,36 @@ export default function BetControls({
 
             {!!subline && (
               <div className="mt-1 text-white/90 text-xs md:text-sm font-semibold flex items-center gap-2">
-                {lastWinItems?.length === 1 && (
+                {/* When controlled by winDisplay, render subline as-is (with matrix if provided) */}
+                {winDisplay?.visible ? (
+                  subline
+                ) : (
                   <>
-                    <span>{lastWinItems[0].count}x</span>
-                    <span
-                      className="relative inline-block"
-                      style={{ width: 28, height: 28 }}
-                    >
-                      <Image
-                        src={`/symbols/${lastWinItems[0].img}`}
-                        alt={lastWinItems[0].img}
-                        fill
-                        className="object-contain"
-                        unoptimized
-                      />
-                    </span>
+                    {/* fallback (old logic) when there is a single item and no sequencer info */}
+                    {lastWinItems?.length === 1 && (
+                      <>
+                        <span>{lastWinItems[0].count}x</span>
+                        <span
+                          className="relative inline-block"
+                          style={{ width: 28, height: 28 }}
+                        >
+                          <Image
+                            src={`/symbols/${lastWinItems[0].img}`}
+                            alt={lastWinItems[0].img}
+                            fill
+                            className="object-contain"
+                            unoptimized
+                          />
+                        </span>
+                      </>
+                    )}
+                    <span>{subline}</span>
                   </>
                 )}
-                <span>{subline}</span>
               </div>
             )}
           </div>
+
           {/* RIGHT: -  SPIN  + */}
           <div className="flex items-center gap-3 sm:gap-5 justify-end">
             <button
@@ -544,7 +592,6 @@ export default function BetControls({
                 />
               </button>
 
-              {/* единственный anchored bet popup (desktop) */}
               {modal === "bet" && betAnchored && <BetPopup anchored />}
             </div>
 
@@ -568,7 +615,7 @@ export default function BetControls({
           </div>
         </div>
 
-        {/* ===== Mobile ===== */}
+        {/* ===== Mobile (unchanged except subline uses new state) ===== */}
         <div className="md:hidden flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-3">
@@ -618,7 +665,6 @@ export default function BetControls({
               </button>
             </div>
 
-            {/* mobile center banner */}
             <p
               className="text-white font-extrabold uppercase leading-none text-center whitespace-nowrap"
               style={{ fontSize: TIP_FONT }}
@@ -640,25 +686,8 @@ export default function BetControls({
           </div>
 
           {!!subline && (
-            <div className="mx-auto -mt-1 text-white/90 text-[11px] font-semibold flex items-center gap-2">
-              {lastWinItems?.length === 1 && (
-                <>
-                  <span>{lastWinItems[0].count}x</span>
-                  <span
-                    className="relative inline-block"
-                    style={{ width: 22, height: 22 }}
-                  >
-                    <Image
-                      src={`/symbols/${lastWinItems[0].img}`}
-                      alt={lastWinItems[0].img}
-                      fill
-                      className="object-contain"
-                      unoptimized
-                    />
-                  </span>
-                </>
-              )}
-              <span>{subline}</span>
+            <div className="mx-auto -mt-1 text-white/90 text-[11px] font-semibold">
+              {winDisplay?.visible ? subline : <span>{subline}</span>}
             </div>
           )}
 
@@ -749,19 +778,16 @@ export default function BetControls({
             </button>
           </div>
 
-          {/* единственный mobile bet popup (fullscreen) */}
           {modal === "bet" && !betAnchored && <BetPopup anchored={false} />}
         </div>
 
-        {/* === единственные экземпляры модалок === */}
+        {/* unique modals */}
         {modal === "settings" && (
           <SettingsPopup
             key="settings-modal"
             onClose={() => setModal(null)}
-            // FIX: always send a number to avoid toFixed crash
-            totalBet={totalBet} // show the real current total bet
+            totalBet={totalBet}
             onTotalBetStep={(dir) => {
-              // step through allCombos
               const idx = currentIndex;
               if (dir < 0 && idx > 0) {
                 setBet(allCombos[idx - 1].bet);

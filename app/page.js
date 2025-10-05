@@ -15,6 +15,12 @@ export default function Home() {
   const [roundWin, setRoundWin] = useState(0);
   const [lastWinItems, setLastWinItems] = useState([]);
 
+  // NEW: live display info from SlotBoard’s GIF sequencer
+  const [winDisplay, setWinDisplay] = useState({
+    phase: "none",
+    visible: false,
+  });
+
   const handleSpin = useCallback(
     (wager, options = {}) => {
       if (boardState !== "idle") return false;
@@ -30,6 +36,7 @@ export default function Home() {
       setRoundWin(0);
       setLastWinItems([]);
       setCredit((c) => c - spinBet);
+      setWinDisplay({ phase: "none", visible: false }); // clear any prior banner subline
       return true;
     },
     [boardState, credit, totalBet]
@@ -75,7 +82,8 @@ export default function Home() {
           totalBet={totalBet}
           onWin={handleWin}
           onBoardStateChange={handleBoardStateChange}
-          className="w-[min(96vw,1280px)] aspect-[5/3]" // ← was w-[min(92vw,1100px)]
+          onWinDisplay={setWinDisplay} // ← NEW
+          className="w-[min(96vw,1280px)] aspect-[5/3]"
         />
       </div>
 
@@ -90,6 +98,7 @@ export default function Home() {
             canSpin={boardState === "idle"}
             roundWin={roundWin}
             lastWinItems={lastWinItems}
+            winDisplay={winDisplay} // ← NEW
             maxWidth={1070}
             vwWidth={95}
           />
